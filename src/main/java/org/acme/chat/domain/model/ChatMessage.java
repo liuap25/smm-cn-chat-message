@@ -10,5 +10,6 @@ public record ChatMessage(
         String message,
         Instant sentAt,
         Instant readAt
+
 ) {}
 

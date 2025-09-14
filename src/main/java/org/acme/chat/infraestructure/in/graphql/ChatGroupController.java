@@ -1,6 +1,6 @@
 package org.acme.chat.infraestructure.in.graphql;
 
-import org.acme.chat.application.in.CreateChatGroupUseCase;
+import org.acme.chat.application.in.chatgroup.CreateChatGroupUseCase;
 import org.acme.chat.application.out.ChatGroupRepositoryPort;
 import org.acme.chat.domain.exception.ChatGroupCreationException;
 import org.acme.chat.domain.model.ChatGroup;
@@ -19,23 +19,10 @@ public class ChatGroupController {
 
     @Inject
     ChatGroupRepositoryPort chatGroupRepository;
+    
 
-    // Query opcional para obtener un chat group por psicólogo y paciente
-    @Query("getChatGroup")
-    public Uni<ChatGroup> getChatGroup(
-            @Name("psychologistId") String psychologistId,
-            @Name("patientId") String patientId
-    ) {
-        // Aquí podrías agregar un use case para obtenerlo, si lo implementas
-        return Uni.createFrom().failure(new UnsupportedOperationException("No implementado"));
-    }
-
-    // Mutation para crear un chat group
     @Mutation("createChatGroup")
-    public Uni<ChatGroup> createChatGroup(
-            @Name("psychologistId") String psychologistId,
-            @Name("patientId") String patientId
-    ) {
+    public Uni<ChatGroup> createChatGroup(@Name("psychologistId") String psychologistId,@Name("patientId") String patientId){
         return createChatGroupUseCase.createChatGroup(psychologistId, patientId)
                 .onFailure(ChatGroupCreationException.class)
                 .transform(failure -> new GraphQLException(failure.getMessage()));

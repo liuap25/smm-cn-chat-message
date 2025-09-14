@@ -12,7 +12,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Table
+@Table(name = "chat_groups")
 @Getter
 @Setter
 public class ChatGroupEntity {

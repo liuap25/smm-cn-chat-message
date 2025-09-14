@@ -26,10 +26,16 @@ public class ChatGroupRepository implements PanacheRepositoryBase<ChatGroupEntit
         );
     }
 
-    // Buscar por psicólogo y paciente (opcional, útil para evitar duplicados)
-    public Uni<ChatGroupEntity> findByPsychologistAndPatient(String psychologistId, String patientId) {
-        return find("psychologistId = ?1 and patientId = ?2", psychologistId, patientId)
-                .firstResult();
+    public Uni<ChatGroupEntity> findByPsychologistIdAndPatientId(String psychologistId, String patientId) {
+    return sessionFactory.withSession(session ->
+        session.createQuery(
+            "FROM ChatGroupEntity g WHERE g.psychologistId = :psyId AND g.patientId = :patId",
+            ChatGroupEntity.class
+        )
+        .setParameter("psyId", psychologistId)
+        .setParameter("patId", patientId)
+        .getSingleResultOrNull()
+    );
     }
 
     public Uni<ChatGroupEntity> findById(UUID chatGroupId) {
@@ -94,6 +100,41 @@ public class ChatGroupRepository implements PanacheRepositoryBase<ChatGroupEntit
         );
     }
 
-
-
+       public Uni<List<Object[]>> findChatSidebarRawData(String userId) {
+        return sessionFactory.withSession(session ->
+        session.createQuery("""
+            SELECT 
+                g.id,
+                CASE 
+                    WHEN g.patientId = :userId THEN g.psychologistId 
+                    ELSE g.patientId 
+                END AS otherUserId,
+                lastMsg.sentAt,
+                lastMsg.message,
+                SUM(CASE WHEN m.readAt IS NULL AND m.receiverId = :userId THEN 1 ELSE 0 END)
+            FROM ChatGroupEntity g
+            LEFT JOIN ChatMessageEntity m ON m.chatGroup.id = g.id
+            LEFT JOIN ChatMessageEntity lastMsg ON lastMsg.id = (
+                SELECT m2.id
+                FROM ChatMessageEntity m2
+                WHERE m2.chatGroup.id = g.id
+                ORDER BY m2.sentAt DESC
+                LIMIT 1
+            )
+            WHERE g.patientId = :userId OR g.psychologistId = :userId
+            GROUP BY g.id, g.patientId, g.psychologistId, lastMsg.sentAt, lastMsg.message
+            ORDER BY lastMsg.sentAt DESC NULLS LAST
+        """, Object[].class)
+        .setParameter("userId", userId)
+        .getResultList()
+    );
+    }
 }
+
+
+   
+
+
+
+
+

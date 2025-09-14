@@ -1,4 +1,4 @@
-package org.acme.chat.application.in;
+package org.acme.chat.application.in.message;
 
 import org.acme.shared.ChatMessage.ChatMessageResponseDto;
 

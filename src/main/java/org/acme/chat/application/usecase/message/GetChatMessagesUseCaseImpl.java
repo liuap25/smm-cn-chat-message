@@ -1,11 +1,11 @@
-package org.acme.chat.application.usecase;
+package org.acme.chat.application.usecase.message;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import org.acme.chat.application.in.GetChatMessagesUseCase;
+import org.acme.chat.application.in.message.GetChatMessagesUseCase;
 import org.acme.chat.application.out.ChatGroupRepositoryPort;
 import org.acme.chat.application.out.ChatMessageRepositoryPort;
 import org.acme.chat.application.out.PatientClientPort;

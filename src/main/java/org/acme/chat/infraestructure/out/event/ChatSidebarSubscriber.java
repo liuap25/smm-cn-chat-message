@@ -7,29 +7,69 @@ import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
 
 import io.smallrye.mutiny.Multi;
+import io.smallrye.mutiny.operators.multi.processors.BroadcastProcessor;
 import io.vertx.core.json.JsonObject;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 @ApplicationScoped
 public class ChatSidebarSubscriber {
 
-     // Recibe mensajes crudos como JsonObject desde RabbitMQ
-    @Channel("chat-sidebar-update-in")
-    Multi<JsonObject> sidebarUpdates;
+     // --------- Psychologist ---------
+    private final BroadcastProcessor<ChatSidebarDTO> psychologistAllProcessor = BroadcastProcessor.create();
+    private final BroadcastProcessor<ChatSidebarDTO> psychologistUnreadProcessor = BroadcastProcessor.create();
 
-    // Procesa cada mensaje entrante
-    @Incoming("chat-sidebar-update-in")
-    public void consume(JsonObject json) {
+    // --------- Patient ---------
+    private final BroadcastProcessor<ChatSidebarDTO> patientAllProcessor = BroadcastProcessor.create();
+    private final BroadcastProcessor<ChatSidebarDTO> patientUnreadProcessor = BroadcastProcessor.create();
+
+    // ------- Incoming Consumers --------
+    @Incoming("sidebar-psychologist-all-in")
+    public void consumePsychologistAll(JsonObject json) {
         ChatSidebarDTO dto = mapJsonToDto(json);
-        System.out.println("📩 Sidebar DTO recibido: " + dto);
+        System.out.println("📩 Sidebar ALL Psychologist recibido: " + dto);
+        psychologistAllProcessor.onNext(dto);
     }
 
-    // Devuelve un Multi<ChatSidebarDTO> listo para GraphQL Subscription
-    public Multi<ChatSidebarDTO> getSidebarUpdates() {
-        return sidebarUpdates.map(this::mapJsonToDto);
+    @Incoming("sidebar-psychologist-unread-in")
+    public void consumePsychologistUnread(JsonObject json) {
+        ChatSidebarDTO dto = mapJsonToDto(json);
+        System.out.println("📩 Sidebar UNREAD Psychologist recibido: " + dto);
+        psychologistUnreadProcessor.onNext(dto);
     }
 
-    // Mapea JsonObject -> ChatSidebarDTO
+    @Incoming("sidebar-patient-all-in")
+    public void consumePatientAll(JsonObject json) {
+        ChatSidebarDTO dto = mapJsonToDto(json);
+        System.out.println("📩 Sidebar ALL Patient recibido: " + dto);
+        patientAllProcessor.onNext(dto);
+    }
+
+    @Incoming("sidebar-patient-unread-in")
+    public void consumePatientUnread(JsonObject json) {
+        ChatSidebarDTO dto = mapJsonToDto(json);
+        System.out.println("📩 Sidebar UNREAD Patient recibido: " + dto);
+        patientUnreadProcessor.onNext(dto);
+    }
+
+    // ------- Multi Exposed para GraphQL Subscriptions --------
+    public Multi<ChatSidebarDTO> getPsychologistAllSidebarUpdates() {
+        return psychologistAllProcessor;
+    }
+
+    public Multi<ChatSidebarDTO> getPsychologistUnreadSidebarUpdates() {
+        return psychologistUnreadProcessor;
+    }
+
+    public Multi<ChatSidebarDTO> getPatientAllSidebarUpdates() {
+        return patientAllProcessor;
+    }
+
+    public Multi<ChatSidebarDTO> getPatientUnreadSidebarUpdates() {
+        return patientUnreadProcessor;
+    }
+
+    // ------- Mapper --------
     private ChatSidebarDTO mapJsonToDto(JsonObject json) {
         return new ChatSidebarDTO(
             json.getString("chatGroupId"),
@@ -45,5 +85,6 @@ public class ChatSidebarSubscriber {
                 : 0L
         );
     }
+
     
 }

@@ -1,6 +1,6 @@
 package org.acme.chat.application.usecase.message;
 
-import org.acme.chat.application.in.UpdateMessageUseCase;
+import org.acme.chat.application.in.message.UpdateMessageUseCase;
 import org.acme.chat.application.out.ChatMessageRepositoryPort;
 import org.acme.chat.domain.model.ChatMessage;
 

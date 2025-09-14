@@ -19,11 +19,6 @@ public class PsychologistGrapQLClient implements PsychologistClientPort {
 
 
     @Override
-    public Uni<List<PatientProfileChatOut>> getPatientProfilesForChat(String psychologistExternalId) {
-     return psychologistGrapQLApi.getPatientProfilesForChat(psychologistExternalId);
-    }
-
-    @Override
     public Uni<List<PsychologistDTO>> getPsychologistsByPatient(String patientId) {  
         return psychologistGrapQLApi.getPsychologistsByPatient(patientId);
     }
@@ -33,25 +28,12 @@ public class PsychologistGrapQLClient implements PsychologistClientPort {
         return psychologistGrapQLApi.getPsychologistByUserId(userId);
     }
 
-     @Override
-    public Uni<String> findPsychologistProfileId(String userId) {
-        return psychologistGrapQLApi.findPsychologistProfileId(userId);
-    }
-
     @Override
     public Uni<List<PatientProfileChatOut>> getPatientsByPsychologist(String psychologistUserId) {
         return psychologistGrapQLApi.getPatientsByPsychologist(psychologistUserId);
     }
 
 
-
-
     
-
-    
- 
-
-
-       
     
 }

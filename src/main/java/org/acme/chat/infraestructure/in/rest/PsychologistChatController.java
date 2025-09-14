@@ -24,12 +24,7 @@ public class PsychologistChatController {
     @Inject
     PsychologistClientPort psychologistClient;
 
-    @GET
-    @Path("/getallpatients/{psychologistExternalId}")
-    public Uni<List<PatientProfileChatOut>> getPatientsForChat(@PathParam("psychologistExternalId") String psychologistExternalId) {
-        return psychologistClient.getPatientProfilesForChat(psychologistExternalId);
-    }
-
+   
     @GET
     @Path("/getallpsychologist/{patientId}")
     public Uni<List<PsychologistDTO>> getPsychologistsByPatient(@PathParam("patientId") String patientId ){
@@ -40,13 +35,6 @@ public class PsychologistChatController {
     @Path("/{userId}")
     public Uni<PsychologistChatDto> getPsychologistChatByUserId(@PathParam("userId") String userId) {
         return psychologistClient.getPsychologistByUserId(userId);
-    }
-
-   
-    @GET
-    @Path("/profileId/{userId}")
-    public Uni<String> getPsychologistProfileId(@PathParam("userId") String userId) {
-        return psychologistClient.findPsychologistProfileId(userId);
     }
 
     @GET

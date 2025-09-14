@@ -14,11 +14,11 @@ import jakarta.enterprise.context.ApplicationScoped;
 @ApplicationScoped
 public class ChatMessageSubscriber {
 
-      // Multi<JsonObject> que recibe los mensajes entrantes del canal
+
     @Channel("chat-messages-in")
     Multi<JsonObject> messages;
 
-    // Consumir mensajes del canal y enviar a WebSocket
+    
     @Incoming("chat-messages-in")
     @Outgoing("websocket-broadcast")
     public ChatMessageResponseDto consume(JsonObject json) {
@@ -27,26 +27,26 @@ public class ChatMessageSubscriber {
         return dto;
     }
 
-    // Suscripción para que el frontend reciba los mensajes en tiempo real
     public Multi<ChatMessageResponseDto> subscribe() {
         return messages.map(this::mapJsonToDto);
     }
 
-    // Método auxiliar para mapear JsonObject a DTO incluyendo readAt y sentAt
     private ChatMessageResponseDto mapJsonToDto(JsonObject json) {
         ChatMessageResponseDto dto = new ChatMessageResponseDto();
         dto.setId(UUID.fromString(json.getString("id")));
         dto.setChatGroupId(UUID.fromString(json.getString("chatGroupId")));
         dto.setMessage(json.getString("message"));
 
-        // Parsear sentAt si existe
         if (json.containsKey("sentAt") && json.getString("sentAt") != null) {
             dto.setSentAt(Instant.parse(json.getString("sentAt")));
         }
-
-        // Parsear readAt si existe
+    
         if (json.containsKey("readAt") && json.getString("readAt") != null) {
             dto.setReadAt(Instant.parse(json.getString("readAt")));
+        }
+
+        if (json.containsKey("senderID") && json.getString("senderID") != null) {
+        dto.setSenderID(json.getString("senderID"));
         }
 
 

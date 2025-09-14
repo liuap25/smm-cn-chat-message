@@ -1,6 +1,6 @@
 package org.acme.chat.application.usecase.message;
 
-import org.acme.chat.application.in.GetMessageByIdUseCase;
+import org.acme.chat.application.in.message.GetMessageByIdUseCase;
 import org.acme.chat.application.out.ChatMessageRepositoryPort;
 import org.acme.chat.domain.exception.ChatMessageException;
 import org.acme.chat.domain.model.ChatMessage;

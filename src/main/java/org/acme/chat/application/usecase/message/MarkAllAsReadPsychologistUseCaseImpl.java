@@ -5,21 +5,20 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.acme.chat.application.in.message.MarkAllMessagesAsReadUseCase;
+import org.acme.chat.application.in.message.MarkAllAsReadPsychologistUseCase;
 import org.acme.chat.application.out.ChatGroupRepositoryPort;
 import org.acme.chat.application.out.ChatMessageRepositoryPort;
 import org.acme.chat.domain.exception.ChatMessageException;
 import org.acme.chat.domain.model.ChatMessage;
 import org.acme.chat.infraestructure.out.event.ChatMessagePublisher;
 import org.acme.shared.ChatMessage.ChatMessageResponseDto;
+
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
-
 @ApplicationScoped
-
-public class MarkMessageAsReadUseCaseImpl implements MarkAllMessagesAsReadUseCase{
+public class MarkAllAsReadPsychologistUseCaseImpl implements MarkAllAsReadPsychologistUseCase {
 
     @Inject
     ChatMessageRepositoryPort chatMessageRepository;
@@ -30,13 +29,14 @@ public class MarkMessageAsReadUseCaseImpl implements MarkAllMessagesAsReadUseCas
     @Inject
     ChatGroupRepositoryPort chatGroupRepository;
 
-   
+
 
     @Override
-    public Uni<Boolean> markAllAsRead(String chatGroupId, String readerId) {
-        Instant now = Instant.now();
+    public Uni<Boolean> markAllAsReadPsychologist(String chatGroupId, String readerId) {
+        
+         Instant now = Instant.now();
 
-        return chatMessageRepository.findAllUnreadByChatGroup(chatGroupId, readerId)
+    return chatMessageRepository.findAllUnreadByChatGroup(chatGroupId, readerId)
         .onItem().ifNull().failWith(() -> new ChatMessageException("No hay mensajes pendientes"))
         .onItem().transformToUni(messages -> {
             // Marcar todos los mensajes como leídos
@@ -72,18 +72,18 @@ public class MarkMessageAsReadUseCaseImpl implements MarkAllMessagesAsReadUseCas
                     return chatGroupRepository.getSidebarDTO(chatGroupId, readerId)
                         .onItem().transformToUni(sidebar -> {
                             if (sidebar != null) {
-                                publisher.publishPatientSidebar(sidebar); // ALL
+                                System.out.println("📤 Publicando actualización de sidebar (Psychologist): " + sidebar);
+                                publisher.publishPsychologistSidebar(sidebar); // ALL
                             }
 
                             // Publicar sidebar UNREAD actualizado
                             return chatGroupRepository.getSidebarUnreadDTO(chatGroupId, readerId)
                                 .onItem().transformToUni(unreadSidebar -> {
                                     if (unreadSidebar != null) {
-                                        System.out.println("📩 Sidebar UNREAD Patient actualizado: " + unreadSidebar);
-                                        publisher.publishPatientSidebarUnread(unreadSidebar); // UNREAD
+                                        System.out.println("📩 Sidebar UNREAD Psychologist actualizado: " + unreadSidebar);
+                                        publisher.publishPsychologistSidebarUnread(unreadSidebar); // UNREAD
                                     } else {
-                                        // Log para asegurarnos que se convirtió a 0
-                                        System.out.println("📩 Sidebar UNREAD Patient: todos los mensajes están leídos (unreadCount=0)");
+                                        System.out.println("📩 Sidebar UNREAD Psychologist: todos los mensajes están leídos (unreadCount=0)");
                                     }
                                     return Uni.createFrom().item(true);
                                 });
@@ -91,13 +91,7 @@ public class MarkMessageAsReadUseCaseImpl implements MarkAllMessagesAsReadUseCas
                 });
         });
     }
+
 }
-    
-    
-
-
-
-
-
     
 

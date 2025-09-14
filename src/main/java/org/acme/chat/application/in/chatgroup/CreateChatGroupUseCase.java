@@ -1,4 +1,4 @@
-package org.acme.chat.application.in;
+package org.acme.chat.application.in.chatgroup;
 
 import org.acme.chat.domain.model.ChatGroup;
 

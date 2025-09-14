@@ -1,5 +1,6 @@
 package org.acme.chat.infraestructure.out.persist.repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -89,6 +90,34 @@ public class ChatMessageRepository implements PanacheRepositoryBase<ChatMessageE
         .setMaxResults(limit)    
         .getResultList()
     );
+    }
+
+     public Uni<String> getLastMessage(String chatGroupId) {
+            return sessionFactory.withSession(session -> session
+            .createQuery(
+                "SELECT m.message FROM ChatMessageEntity m " +
+                "WHERE m.chatGroup.id = :chatGroupId " +
+                "ORDER BY m.sentAt DESC",
+                String.class
+            )
+            .setParameter("chatGroupId", UUID.fromString(chatGroupId))  // ✅ Conversión necesaria
+            .setMaxResults(1)
+            .getSingleResultOrNull()
+        );
+         
+    }
+          public Uni<Instant> getLastMessageDate(String chatGroupId) {
+            return sessionFactory.withSession(session ->
+            session.createQuery(
+                "SELECT m.sentAt FROM ChatMessageEntity m " +
+                "WHERE m.chatGroup.id = :chatGroupId " +
+                "ORDER BY m.sentAt DESC",
+                Instant.class
+            )
+            .setParameter("chatGroupId", UUID.fromString(chatGroupId))
+            .setMaxResults(1)
+            .getSingleResultOrNull()
+        );
     }
 
 

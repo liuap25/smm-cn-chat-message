@@ -1,5 +1,6 @@
 package org.acme.chat.application.out;
 
+import java.time.Instant;
 import java.util.List;
 
 
@@ -13,9 +14,13 @@ public interface ChatMessageRepositoryPort {
     Multi<ChatMessage> findByChatGroupId(String chatGroupId);
     Uni<List<ChatMessage>> findAllByChatGroupId(String chatGroupId,int offset,int limit);
 
-    Uni<ChatMessage> findById(String id);    // <-- nuevo
-    Uni<ChatMessage> update(ChatMessage message); // <-- nuevo
+    Uni<ChatMessage> findById(String id);    
+    Uni<ChatMessage> update(ChatMessage message); 
 
     Uni<List<ChatMessage>> findAllUnreadByChatGroup(String chatGroupId, String receiverId);
     Uni<List<ChatMessage>> updateAll(List<ChatMessage> messages);
+
+    
+    Uni<String> getLastMessage(String chatGroupId);
+    Uni<Instant> getLastMessageDate(String chatGroupId);
 }

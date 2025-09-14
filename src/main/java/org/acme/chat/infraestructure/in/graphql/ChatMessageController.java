@@ -1,13 +1,14 @@
 package org.acme.chat.infraestructure.in.graphql;
 
 
-import java.util.List;
 import java.util.UUID;
 
-import org.acme.chat.application.in.GetChatMessagesUseCase;
-import org.acme.chat.application.in.GetMessageByIdUseCase;
-import org.acme.chat.application.in.SendMessageUseCase;
+import org.acme.chat.application.in.message.GetChatMessagesUseCase;
+import org.acme.chat.application.in.message.GetMessageByIdUseCase;
+import org.acme.chat.application.in.message.MarkAllAsReadPsychologistUseCase;
 import org.acme.chat.application.in.message.MarkAllMessagesAsReadUseCase;
+import org.acme.chat.application.in.message.SendMessageByPatientUseCase;
+import org.acme.chat.application.in.message.SendMessageUseCase;
 import org.acme.chat.domain.model.ChatMessage;
 import org.acme.chat.infraestructure.out.event.ChatMessagePublisher;
 import org.acme.chat.infraestructure.out.event.ChatMessageSubscriber;
@@ -29,6 +30,9 @@ public class ChatMessageController {
     SendMessageUseCase sendMessageUseCase;
 
     @Inject
+    SendMessageByPatientUseCase sendMessageByPatientUseCase;
+
+    @Inject
     GetChatMessagesUseCase getChatMessagesUseCase;
 
     @Inject
@@ -46,6 +50,9 @@ public class ChatMessageController {
     @Inject
     MarkAllMessagesAsReadUseCase markAllMessagesAsReadUseCase;
 
+    @Inject
+    MarkAllAsReadPsychologistUseCase markAllAsReadPsychologistUseCase;
+
 
 
     @Mutation
@@ -57,6 +64,23 @@ public class ChatMessageController {
     ) {
         return sendMessageUseCase.sendMessage(chatGroupId, senderId, receiverId, message);
     }
+
+
+    @Mutation
+    public Uni<ChatMessageResponseDto> sendMessagePatient(
+            @Name("chatGroupId") String chatGroupId,
+            @Name("senderId") String senderId,
+            @Name("receiverId") String receiverId,
+            @Name("message") String message
+    ) {
+        return sendMessageByPatientUseCase.sendMessagePatient(chatGroupId, senderId, receiverId, message);
+    }
+
+
+
+
+
+
 
     @Subscription
     public Multi<ChatMessageResponseDto> subscribeMessages(@Name("chatGroupId") String chatGroupId) {
@@ -78,11 +102,21 @@ public class ChatMessageController {
     }
 
     @Mutation("markAllMessagesAsRead")
-    public Uni<List<ChatMessageResponseDto>> markAllMessagesAsRead(
+    public Uni<Boolean> markAllMessagesAsRead(
             @Name("chatGroupId") String chatGroupId,
             @Name("readerId") String readerId
     ) {
         return markAllMessagesAsReadUseCase.markAllAsRead(chatGroupId, readerId);
     }
+
+    @Mutation("MarkAllAsReadPsychologis")
+    public Uni<Boolean> markAllAsReadPsychologist(
+            @Name("chatGroupId") String chatGroupId,
+            @Name("readerId") String readerId
+    ) {
+        return markAllAsReadPsychologistUseCase.markAllAsReadPsychologist(chatGroupId, readerId);
+    }
     
+
+
 }

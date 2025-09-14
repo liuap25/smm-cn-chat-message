@@ -17,7 +17,8 @@ public class ChatMessageResponseDto {
     private String message;
     private Instant sentAt;
     private UUID chatGroupId; 
-    private Instant readAt;  // <- agregar
+    private Instant readAt;
+    private String senderID; 
 
     
 }

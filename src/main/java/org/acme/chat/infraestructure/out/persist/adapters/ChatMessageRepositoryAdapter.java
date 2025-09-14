@@ -55,10 +55,10 @@ public class ChatMessageRepositoryAdapter implements ChatMessageRepositoryPort {
     @Override
     public Uni<List<ChatMessage>> findAllByChatGroupId(String chatGroupId,int offset,int limit) {    
         return chatMessageRepository
-        .findAllByChatGroupId(UUID.fromString(chatGroupId), offset, limit) // 👈 Pasamos offset y limit
+        .findAllByChatGroupId(UUID.fromString(chatGroupId), offset, limit) 
         .onItem().transform(messages ->
             messages.stream()
-                .map(chatMessageMapper::toDomain) // 👈 Convertimos cada entity a domain
+                .map(chatMessageMapper::toDomain) 
                 .toList()
         );
     }
@@ -76,7 +76,6 @@ public class ChatMessageRepositoryAdapter implements ChatMessageRepositoryPort {
          ChatMessageEntity entity = new ChatMessageEntity();
          entity.setId(message.id() != null ? UUID.fromString(message.id()) : null);
 
-        // Solo necesitamos actualizar campos existentes, en este caso readAt
          entity.setReadAt(message.readAt());
 
         return chatMessageRepository.update(entity)
@@ -96,7 +95,6 @@ public class ChatMessageRepositoryAdapter implements ChatMessageRepositoryPort {
 
     @Override
     public Uni<List<ChatMessage>> updateAll(List<ChatMessage> messages) {
-         // Convertimos ChatMessage -> ChatMessageEntity usando el mapper
         List<ChatMessageEntity> entities = messages.stream()
             .map(chatMessageMapper::toEntity)
             .collect(Collectors.toList());
@@ -110,12 +108,18 @@ public class ChatMessageRepositoryAdapter implements ChatMessageRepositoryPort {
             );
     }
 
-    
+    @Override
+    public Uni<String> getLastMessage(String chatGroupId) {
+        
+         return chatMessageRepository.getLastMessage(chatGroupId);
+    }
+
+    @Override
+    public Uni<Instant> getLastMessageDate(String chatGroupId) {
+
+        return chatMessageRepository.getLastMessageDate(chatGroupId);
+    }
 
     
-
-    
-
-
     
 }

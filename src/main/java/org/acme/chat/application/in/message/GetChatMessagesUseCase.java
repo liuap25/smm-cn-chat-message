@@ -1,4 +1,4 @@
-package org.acme.chat.application.in;
+package org.acme.chat.application.in.message;
 
 
 
