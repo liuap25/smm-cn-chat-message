@@ -5,9 +5,12 @@ import java.util.UUID;
 
 import org.acme.chat.application.in.message.SendMessageUseCase;
 import org.acme.chat.application.out.ChatGroupRepositoryPort;
+import org.acme.chat.application.out.ChatMessageIncidentRepositoryPort;
 import org.acme.chat.application.out.ChatMessageRepositoryPort;
+import org.acme.chat.application.usecase.MessageSanitizerService;
 import org.acme.chat.domain.exception.ChatMessageException;
 import org.acme.chat.domain.model.ChatMessage;
+import org.acme.chat.domain.model.ChatMessageIncident;
 import org.acme.chat.infraestructure.out.event.ChatMessagePublisher;
 import org.acme.chat.infraestructure.out.persist.adapters.clients.PatientGraphQLClient;
 import org.acme.chat.infraestructure.out.persist.adapters.clients.PsychologistGrapQLClient;
@@ -39,6 +42,12 @@ public class SendMessageUseCaseImpl implements SendMessageUseCase {
     @Inject
     PsychologistGrapQLClient psychologistClient;
 
+    @Inject
+    ChatMessageIncidentRepositoryPort incidentRepository;
+
+    @Inject
+    MessageSanitizerService sanitizer;
+
     @Override
     @WithTransaction
     public Uni<ChatMessageResponseDto> sendMessage(String chatGroupId, String senderId, String ignoredReceiverId, String message) {
@@ -52,79 +61,96 @@ public class SendMessageUseCaseImpl implements SendMessageUseCase {
 
                 String receiverId = chatGroup.patientId(); // siempre paciente
 
+                // --- aplicar sanitización ---
+                String sanitizedMessage = sanitizer.sanitize(message);
+
                 ChatMessage chatMessage = new ChatMessage(
                     null,
                     chatGroupId,
                     senderId,
                     receiverId,
-                    message,
+                    sanitizedMessage,
                     Instant.now(),
                     null
                 );
 
                 return chatMessageRepository.save(chatMessage)
                     .onItem().transformToUni(savedMessage -> {
+                        // --- guardar incidente solo si fue enmascarado ---
+                        Uni<Void> maybeSaveIncident = Uni.createFrom().voidItem();
+                        if ("[RESTRICTED_MESSAGE]".equals(sanitizedMessage)) {
+                            ChatMessageIncident incident = new ChatMessageIncident(
+                                null,
+                                savedMessage.id(), // referencia al mensaje real
+                                message,           // original sin enmascarar
+                                Instant.now()
+                            );
+                            maybeSaveIncident = incidentRepository.save(incident).replaceWithVoid();
+                        }
 
-                        ChatMessageResponseDto dto = new ChatMessageResponseDto(
-                            UUID.fromString(savedMessage.id()),
-                            savedMessage.message(),
-                            savedMessage.sentAt(),
-                            UUID.fromString(chatGroupId),
-                            savedMessage.readAt(),
-                            savedMessage.senderId()
-                        );
+                        return maybeSaveIncident
+                            .onItem().transformToUni(ignore -> {
+                                ChatMessageResponseDto dto = new ChatMessageResponseDto(
+                                    UUID.fromString(savedMessage.id()),
+                                    savedMessage.message(),
+                                    savedMessage.sentAt(),
+                                    UUID.fromString(chatGroupId),
+                                    savedMessage.readAt(),
+                                    savedMessage.senderId()
+                                );
 
-                        // Publicar mensaje universal
-                        publisher.publish(dto);
+                                // Publicar mensaje universal
+                                publisher.publish(dto);
 
-                        return chatGroupRepository.countUnreadMessages(chatGroupId, receiverId)
-                            .onItem().transformToUni(unreadCount -> {
+                                return chatGroupRepository.countUnreadMessages(chatGroupId, receiverId)
+                                    .onItem().transformToUni(unreadCount -> {
 
-                                // --- ALL del remitente (psicólogo) ---
-                                Uni<ChatSidebarDTO> sidebarSender = patientClient.getChatPatient(receiverId)
-                                    .onFailure().recoverWithItem(() -> new org.acme.shared.PatientChatDto(
-                                        receiverId, "Paciente desconocido", "default-patient.jpg"))
-                                    .onItem().transform(patient -> {
-                                        ChatSidebarDTO sidebarDto = new ChatSidebarDTO(
-                                            chatGroupId,
-                                            receiverId,
-                                            patient.getFullname(),
-                                            patient.getPhotoUrl(),
-                                            savedMessage.message(),
-                                            savedMessage.sentAt(),
-                                            0 // remitente siempre 0
-                                        );
-                                        publisher.publishPsychologistSidebar(sidebarDto); // ALL
-                                        return sidebarDto;
+                                        // --- ALL del remitente (psicólogo) ---
+                                        Uni<ChatSidebarDTO> sidebarSender = patientClient.getChatPatient(receiverId)
+                                            .onFailure().recoverWithItem(() -> new org.acme.shared.PatientChatDto(
+                                                receiverId, "Paciente desconocido", "default-patient.jpg"))
+                                            .onItem().transform(patient -> {
+                                                ChatSidebarDTO sidebarDto = new ChatSidebarDTO(
+                                                    chatGroupId,
+                                                    receiverId,
+                                                    patient.getFullname(),
+                                                    patient.getPhotoUrl(),
+                                                    savedMessage.message(),
+                                                    savedMessage.sentAt(),
+                                                    0 // remitente siempre 0
+                                                );
+                                                publisher.publishPsychologistSidebar(sidebarDto); // ALL
+                                                return sidebarDto;
+                                            });
+
+                                        // --- ALL y UNREAD del receptor (paciente) ---
+                                        Uni<ChatSidebarDTO> sidebarReceiver = psychologistClient.getPsychologistByUserId(senderId)
+                                            .onFailure().recoverWithItem(() -> new org.acme.shared.PsychologistChatDto(
+                                                senderId, "Psicólogo desconocido", "default-psychologist.jpg"))
+                                            .onItem().transform(psych -> {
+                                                ChatSidebarDTO sidebarDto = new ChatSidebarDTO(
+                                                    chatGroupId,
+                                                    senderId,
+                                                    psych.getFullName(),
+                                                    psych.getPhotoUrl(),
+                                                    savedMessage.message(),
+                                                    savedMessage.sentAt(),
+                                                    unreadCount.intValue()
+                                                );
+                                                publisher.publishPatientSidebar(sidebarDto); // ALL
+                                                if (unreadCount > 0) {
+                                                    publisher.publishPatientSidebarUnread(sidebarDto); // UNREAD
+                                                }
+                                                return sidebarDto;
+                                            });
+
+                                        return Uni.combine().all().unis(sidebarSender, sidebarReceiver)
+                                                .discardItems()
+                                                .onItem().transform(ignore2 -> dto);
                                     });
-
-                                // --- ALL y UNREAD del receptor (paciente) ---
-                                Uni<ChatSidebarDTO> sidebarReceiver = psychologistClient.getPsychologistByUserId(senderId)
-                                    .onFailure().recoverWithItem(() -> new org.acme.shared.PsychologistChatDto(
-                                        senderId, "Psicólogo desconocido", "default-psychologist.jpg"))
-                                    .onItem().transform(psych -> {
-                                        ChatSidebarDTO sidebarDto = new ChatSidebarDTO(
-                                            chatGroupId,
-                                            senderId,
-                                            psych.getFullName(),
-                                            psych.getPhotoUrl(),
-                                            savedMessage.message(),
-                                            savedMessage.sentAt(),
-                                            unreadCount.intValue() // real
-                                        );
-                                        publisher.publishPatientSidebar(sidebarDto); // ALL
-                                        if (unreadCount > 0) {
-                                            publisher.publishPatientSidebarUnread(sidebarDto); // UNREAD
-                                        }
-                                        return sidebarDto;
-                                    });
-
-                                return Uni.combine().all().unis(sidebarSender, sidebarReceiver)
-                                        .discardItems()
-                                        .onItem().transform(ignore -> dto);
                             });
                     });
             });
-    }
+        }
     
 }

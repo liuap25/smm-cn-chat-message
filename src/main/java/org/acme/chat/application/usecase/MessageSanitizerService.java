@@ -20,15 +20,13 @@ public class MessageSanitizerService {
             return message;
         }
 
-        // Enmascarar correos
-        String sanitized = EMAIL_PATTERN.matcher(message)
-            .replaceAll("[RESTRICTED_EMAIL]");
+        // Si contiene un email o teléfono -> se enmascara TODO el mensaje
+        if (EMAIL_PATTERN.matcher(message).find() || PHONE_PATTERN.matcher(message).find()) {
+            return "[RESTRICTED_MESSAGE]";
+        }
 
-        // Enmascarar teléfonos
-        sanitized = PHONE_PATTERN.matcher(sanitized)
-            .replaceAll("[RESTRICTED_PHONE]");
-
-        return sanitized;
+        // Caso contrario, se devuelve el mismo mensaje
+        return message;
     }
     
 }
